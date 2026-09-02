@@ -99,4 +99,11 @@ class AIService:
                 "AI returned an invalid incident analysis response"
             ) from exc
 
+        analysis["sources"] = list(
+            dict.fromkeys(
+                match["source"]
+                for match in runbook_matches
+            )
+        )
+
         return analysis
