@@ -106,3 +106,26 @@ def get_incidents():
         ),
         200,
     )
+
+@main_bp.get("/api/incidents/<string:incident_id>")
+def get_incident(incident_id):
+    incident = db.session.get(Incident, incident_id)
+
+    if incident is None:
+        return (
+            jsonify(
+                {
+                    "error": "Incident not found",
+                }
+            ),
+            404,
+        )
+
+    return (
+        jsonify(
+            {
+                "incident": incident.to_dict(),
+            }
+        ),
+        200,
+    )
