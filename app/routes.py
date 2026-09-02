@@ -86,3 +86,23 @@ def create_incident():
         ),
         201,
     )
+
+
+@main_bp.get("/api/incidents")
+def get_incidents():
+    incidents = Incident.query.order_by(
+        Incident.created_at.desc()
+    ).all()
+
+    return (
+        jsonify(
+            {
+                "incidents": [
+                    incident.to_dict()
+                    for incident in incidents
+                ],
+                "count": len(incidents),
+            }
+        ),
+        200,
+    )
