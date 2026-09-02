@@ -133,7 +133,42 @@ def update_incident_status(incident_id):
             400,
         )
 
-    status = data.get("status")
+    status = str(data.get("status", "")).strip()
+
+    allowed_statuses = [
+        "Open",
+        "Investigating",
+        "Resolved",
+    ]
+
+    if not status:
+        return (
+            jsonify(
+                {
+                    "error": "Validation failed",
+                    "details": {
+                        "status": "Status is required",
+                    },
+                }
+            ),
+            400,
+        )
+
+    if status not in allowed_statuses:
+        return (
+            jsonify(
+                {
+                    "error": "Validation failed",
+                    "details": {
+                        "status": (
+                            "Status must be one of: "
+                            "Open, Investigating, Resolved"
+                        ),
+                    },
+                }
+            ),
+            400,
+        )
 
     incident.status = status
     db.session.commit()
@@ -170,3 +205,6 @@ def get_incident(incident_id):
         ),
         200,
     )
+
+
+
