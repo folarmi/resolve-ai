@@ -97,6 +97,11 @@ def get_incidents():
         "",
     ).strip()
 
+    status = request.args.get(
+        "status",
+        "",
+    ).strip()
+
     query = Incident.query
 
     if search:
@@ -107,6 +112,11 @@ def get_incidents():
                 Incident.title.ilike(search_pattern),
                 Incident.description.ilike(search_pattern),
             )
+        )
+
+    if status:
+        query = query.filter(
+            Incident.status == status
         )
 
     incidents = query.order_by(
