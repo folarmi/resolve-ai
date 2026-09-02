@@ -30,12 +30,48 @@ def health():
 
 @main_bp.post("/api/incidents")
 def create_incident():
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+
+    if not data:
+        return (
+            jsonify(
+                {
+                    "error": "Request body must contain valid JSON",
+                }
+            ),
+            400,
+        )
+
+    title = str(data.get("title", "")).strip()
+    description = str(data.get("description", "")).strip()
+    logs = data.get("logs")
+
+    errors = {}
+
+    if not title:
+        errors["title"] = "Title is required"
+
+    if not description:
+        errors["description"] = "Description is required"
+
+    if errors:
+        return (
+            jsonify(
+                {
+                    "error": "Validation failed",
+                    "details": errors,
+                }
+            ),
+            400,
+        )
+
+    if logs is not None:
+        logs = str(logs).strip()
 
     incident = Incident(
-        title=data.get("title"),
-        description=data.get("description"),
-        logs=data.get("logs"),
+        title=title,
+        description=description,
+        logs=logs,
     )
 
     db.session.add(incident)
