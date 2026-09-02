@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from sqlalchemy import or_
 
 from app.extensions import db
 from app.models import Incident
@@ -89,8 +90,26 @@ def create_incident():
 
 
 @main_bp.get("/api/incidents")
+
 def get_incidents():
-    incidents = Incident.query.order_by(
+    search = request.args.get(
+        "search",
+        "",
+    ).strip()
+
+    query = Incident.query
+
+    if search:
+        search_pattern = f"%{search}%"
+
+        query = query.filter(
+            or_(
+                Incident.title.ilike(search_pattern),
+                Incident.description.ilike(search_pattern),
+            )
+        )
+
+    incidents = query.order_by(
         Incident.created_at.desc()
     ).all()
 
