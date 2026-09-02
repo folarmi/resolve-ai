@@ -30,6 +30,11 @@ def client(app):
     return app.test_client()
 
 
+# =========================================================
+# Incident Creation Tests
+# =========================================================
+
+
 def test_create_incident_successfully(client):
     response = client.post(
         "/api/incidents",
@@ -95,6 +100,12 @@ def test_create_incident_without_json_returns_400(client):
 
     assert data["error"] == "Request body must contain valid JSON"
 
+
+# =========================================================
+# Incident Retrieval Tests
+# =========================================================
+
+
 def test_get_incidents_returns_incident_history(client):
     create_response = client.post(
         "/api/incidents",
@@ -129,6 +140,8 @@ def test_get_incident_by_id(client):
         },
     )
 
+    assert create_response.status_code == 201
+
     incident_id = create_response.get_json()["incident"]["id"]
 
     response = client.get(
@@ -149,6 +162,119 @@ def test_get_incident_by_id(client):
 def test_get_nonexistent_incident_returns_404(client):
     response = client.get(
         "/api/incidents/nonexistent-incident-id"
+    )
+
+    assert response.status_code == 404
+
+    data = response.get_json()
+
+    assert data["error"] == "Incident not found"
+
+
+# =========================================================
+# Incident Status Update Tests
+# =========================================================
+
+
+def test_update_incident_status_successfully(client):
+    create_response = client.post(
+        "/api/incidents",
+        json={
+            "title": "API instability",
+            "description": "The production API is intermittently failing.",
+            "logs": "502 bad gateway",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    incident_id = create_response.get_json()["incident"]["id"]
+
+    response = client.patch(
+        f"/api/incidents/{incident_id}/status",
+        json={
+            "status": "Investigating",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["message"] == "Incident status updated successfully"
+    assert data["incident"]["status"] == "Investigating"
+
+
+def test_update_incident_status_is_persisted(client):
+    create_response = client.post(
+        "/api/incidents",
+        json={
+            "title": "Database outage",
+            "description": "Database connections are failing.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    incident_id = create_response.get_json()["incident"]["id"]
+
+    update_response = client.patch(
+        f"/api/incidents/{incident_id}/status",
+        json={
+            "status": "Resolved",
+        },
+    )
+
+    assert update_response.status_code == 200
+
+    response = client.get(
+        f"/api/incidents/{incident_id}"
+    )
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["incident"]["status"] == "Resolved"
+
+
+def test_update_incident_with_invalid_status_returns_400(client):
+    create_response = client.post(
+        "/api/incidents",
+        json={
+            "title": "Deployment failure",
+            "description": "The latest deployment failed.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    incident_id = create_response.get_json()["incident"]["id"]
+
+    response = client.patch(
+        f"/api/incidents/{incident_id}/status",
+        json={
+            "status": "Pending",
+        },
+    )
+
+    assert response.status_code == 400
+
+    data = response.get_json()
+
+    assert data["error"] == "Validation failed"
+    assert (
+        data["details"]["status"]
+        == "Status must be one of: Open, Investigating, Resolved"
+    )
+
+
+def test_update_nonexistent_incident_returns_404(client):
+    response = client.patch(
+        "/api/incidents/nonexistent-incident-id/status",
+        json={
+            "status": "Resolved",
+        },
     )
 
     assert response.status_code == 404
