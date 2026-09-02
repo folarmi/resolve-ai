@@ -107,6 +107,47 @@ def get_incidents():
         200,
     )
 
+@main_bp.patch("/api/incidents/<string:incident_id>/status")
+def update_incident_status(incident_id):
+    incident = db.session.get(Incident, incident_id)
+
+    if incident is None:
+        return (
+            jsonify(
+                {
+                    "error": "Incident not found",
+                }
+            ),
+            404,
+        )
+
+    data = request.get_json(silent=True)
+
+    if not data:
+        return (
+            jsonify(
+                {
+                    "error": "Request body must contain valid JSON",
+                }
+            ),
+            400,
+        )
+
+    status = data.get("status")
+
+    incident.status = status
+    db.session.commit()
+
+    return (
+        jsonify(
+            {
+                "message": "Incident status updated successfully",
+                "incident": incident.to_dict(),
+            }
+        ),
+        200,
+    )
+
 @main_bp.get("/api/incidents/<string:incident_id>")
 def get_incident(incident_id):
     incident = db.session.get(Incident, incident_id)
