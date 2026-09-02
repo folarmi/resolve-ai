@@ -7,6 +7,7 @@ from app.services.prompts import (
     INCIDENT_ANALYSIS_SYSTEM_PROMPT,
     build_incident_analysis_prompt,
 )
+from app.services.runbook_service import RunbookService
 
 
 class AIService:
@@ -27,16 +28,25 @@ class AIService:
             api_key=api_key,
         )
 
-    def generate(self, prompt, system_prompt=None):
+        self.runbook_service = RunbookService()
+
+    def generate(
+        self,
+        prompt,
+        system_prompt=None,
+    ):
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {
                     "role": "system",
-                    "content": system_prompt
-                    or (
-                        "You are ResolveAI, an AI assistant that helps "
-                        "software engineers diagnose software incidents."
+                    "content": (
+                        system_prompt
+                        or (
+                            "You are ResolveAI, an AI assistant "
+                            "that helps software engineers diagnose "
+                            "software incidents."
+                        )
                     ),
                 },
                 {
@@ -49,8 +59,33 @@ class AIService:
 
         return response.choices[0].message.content
 
+    def build_incident_query(self, incident):
+        parts = [
+            incident.title,
+            incident.description,
+        ]
+
+        if incident.logs:
+            parts.append(incident.logs)
+
+        return "\n".join(parts)
+
     def analyze_incident(self, incident):
-        prompt = build_incident_analysis_prompt(incident)
+        query = self.build_incident_query(
+            incident
+        )
+
+        runbook_matches = (
+            self.runbook_service.search_runbooks(
+                query,
+                limit=3,
+            )
+        )
+
+        prompt = build_incident_analysis_prompt(
+            incident,
+            runbook_matches=runbook_matches,
+        )
 
         response = self.generate(
             prompt=prompt,
@@ -58,13 +93,10 @@ class AIService:
         )
 
         try:
-            return json.loads(response)
+            analysis = json.loads(response)
         except json.JSONDecodeError as exc:
             raise ValueError(
                 "AI returned an invalid incident analysis response"
             ) from exc
 
-
-
-
-      
+        return analysis

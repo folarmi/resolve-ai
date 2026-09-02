@@ -5,6 +5,12 @@ diagnose software incidents.
 Your task is to analyze incident information and provide a concise,
 technically useful diagnosis.
 
+You may receive troubleshooting runbook context. Use that context to
+ground your diagnosis and recommendations where relevant.
+
+Do not claim certainty when the available evidence is insufficient.
+Do not invent runbook content that was not provided.
+
 You must return ONLY valid JSON. Do not include Markdown, code fences,
 or explanatory text outside the JSON.
 
@@ -42,14 +48,31 @@ Major functionality is unavailable or significantly degraded.
 Critical:
 Severe production outage, widespread failure, data-loss risk,
 or security-critical incident.
-
-Base the diagnosis only on the incident information provided.
-Do not claim certainty when the evidence is insufficient.
 """
 
 
-def build_incident_analysis_prompt(incident):
+def build_incident_analysis_prompt(
+    incident,
+    runbook_matches=None,
+):
     logs = incident.logs or "No logs were provided."
+
+    runbook_context = "No relevant runbook context was available."
+
+    if runbook_matches:
+        context_sections = []
+
+        for match in runbook_matches:
+            context_sections.append(
+                (
+                    f"Source: {match['source']}\n"
+                    f"{match['content']}"
+                )
+            )
+
+        runbook_context = "\n\n---\n\n".join(
+            context_sections
+        )
 
     return f"""
 Analyze the following software incident.
@@ -66,6 +89,11 @@ Logs:
 Current Status:
 {incident.status}
 
+Relevant Troubleshooting Runbook Context:
+
+{runbook_context}
+
+Use the runbook context when it is relevant to the incident.
 Identify the most likely technical explanation and provide
 practical investigation and resolution steps.
 
