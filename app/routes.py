@@ -235,5 +235,16 @@ def get_incident(incident_id):
         200,
     )
 
+@main_bp.get("/api/analytics")
+def get_incident_analytics():
+    total_incidents = Incident.query.count()
 
+    return (
+        jsonify(
+            {
+                "total_incidents": total_incidents,
+            }
+        ),
+        200,
+    )
 
