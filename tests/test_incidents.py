@@ -535,3 +535,185 @@ def test_ai_analysis_includes_runbook_sources():
         "api-errors.md",
         "networking.md",
     ]
+
+def test_search_incidents_by_title(client, app):
+    with app.app_context():
+        incident_one = Incident(
+            title="Production API returning 502 errors",
+            description="Gateway cannot connect to upstream service.",
+            status="Open",
+        )
+
+        incident_two = Incident(
+            title="Database connection timeout",
+            description="Application cannot reach PostgreSQL.",
+            status="Open",
+        )
+
+        db.session.add_all([
+            incident_one,
+            incident_two,
+        ])
+        db.session.commit()
+
+    response = client.get(
+        "/api/incidents?search=502"
+    )
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["count"] == 1
+    assert len(data["incidents"]) == 1
+    assert (
+        data["incidents"][0]["title"]
+        == "Production API returning 502 errors"
+    )
+
+
+def test_search_incidents_by_description(client, app):
+    with app.app_context():
+        incident_one = Incident(
+            title="API failure",
+            description=(
+                "Gateway cannot connect to upstream service."
+            ),
+            status="Open",
+        )
+
+        incident_two = Incident(
+            title="Database failure",
+            description="PostgreSQL connection timeout.",
+            status="Open",
+        )
+
+        db.session.add_all([
+            incident_one,
+            incident_two,
+        ])
+        db.session.commit()
+
+    response = client.get(
+        "/api/incidents?search=upstream"
+    )
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["count"] == 1
+    assert (
+        data["incidents"][0]["title"]
+        == "API failure"
+    )
+
+
+def test_filter_incidents_by_status(client, app):
+    with app.app_context():
+        db.session.add_all(
+            [
+                Incident(
+                    title="Open incident",
+                    description="Still open",
+                    status="Open",
+                ),
+                Incident(
+                    title="Investigating incident",
+                    description="Currently being investigated",
+                    status="Investigating",
+                ),
+                Incident(
+                    title="Resolved incident",
+                    description="Already fixed",
+                    status="Resolved",
+                ),
+            ]
+        )
+
+        db.session.commit()
+
+    response = client.get(
+        "/api/incidents?status=Investigating"
+    )
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["count"] == 1
+    assert (
+        data["incidents"][0]["status"]
+        == "Investigating"
+    )
+
+
+def test_search_and_status_filter_together(client, app):
+    with app.app_context():
+        db.session.add_all(
+            [
+                Incident(
+                    title="Production API 502",
+                    description="Upstream connection refused.",
+                    status="Investigating",
+                ),
+                Incident(
+                    title="Production API 502 resolved",
+                    description="Upstream service restored.",
+                    status="Resolved",
+                ),
+                Incident(
+                    title="Database timeout",
+                    description="Database connection failed.",
+                    status="Investigating",
+                ),
+            ]
+        )
+
+        db.session.commit()
+
+    response = client.get(
+        "/api/incidents"
+        "?search=502"
+        "&status=Investigating"
+    )
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["count"] == 1
+    assert (
+        data["incidents"][0]["title"]
+        == "Production API 502"
+    )
+    assert (
+        data["incidents"][0]["status"]
+        == "Investigating"
+    )
+
+
+def test_search_with_no_matches_returns_empty_list(
+    client,
+    app,
+):
+    with app.app_context():
+        incident = Incident(
+            title="Database timeout",
+            description="PostgreSQL is unavailable.",
+            status="Open",
+        )
+
+        db.session.add(incident)
+        db.session.commit()
+
+    response = client.get(
+        "/api/incidents?search=doesnotexist"
+    )
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["count"] == 0
+    assert data["incidents"] == []
