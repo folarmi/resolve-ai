@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment variables
+.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Application data
+*.db
+*.sqlite
+*.sqlite3
+
+# Chroma
+vectorstore/
