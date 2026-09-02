@@ -2,6 +2,10 @@ import pytest
 
 from app import create_app
 from app.extensions import db
+from unittest.mock import patch
+
+from app.models import Incident
+from app.services.ai_service import AIService
 
 
 @pytest.fixture
@@ -282,3 +286,129 @@ def test_update_nonexistent_incident_returns_404(client):
     data = response.get_json()
 
     assert data["error"] == "Incident not found"
+
+
+def test_ai_analyze_incident_returns_structured_result(client, app):
+    create_response = client.post(
+        "/api/incidents",
+        json={
+            "title": "Production API returning 502 errors",
+            "description": "Users are receiving 502 errors after deployment.",
+            "logs": "upstream connect error: connection refused",
+        },
+    )
+
+    incident_id = create_response.get_json()["incident"]["id"]
+
+    mock_analysis = {
+        "summary": "The API gateway cannot reach the upstream service.",
+        "severity": "High",
+        "category": "API Gateway / Reverse Proxy",
+        "probable_causes": [
+            "Upstream service is unavailable",
+            "Incorrect upstream configuration",
+        ],
+        "investigation_steps": [
+            "Verify the upstream service is running",
+            "Check gateway configuration",
+        ],
+        "suggested_resolution": [
+            "Restart the upstream service",
+            "Correct the gateway configuration",
+        ],
+    }
+
+    with patch(
+        "app.services.ai_service.AIService.analyze_incident",
+        return_value=mock_analysis,
+    ):
+        with app.app_context():
+            incident = db.session.get(
+                Incident,
+                incident_id,
+            )
+
+            ai_service = AIService()
+            result = ai_service.analyze_incident(incident)
+
+    assert result["summary"] == (
+        "The API gateway cannot reach the upstream service."
+    )
+    assert result["severity"] == "High"
+    assert result["category"] == "API Gateway / Reverse Proxy"
+    assert len(result["probable_causes"]) == 2
+    assert len(result["investigation_steps"]) == 2
+    assert len(result["suggested_resolution"]) == 2
+
+
+def test_ai_analysis_contains_required_fields(client, app):
+    create_response = client.post(
+        "/api/incidents",
+        json={
+            "title": "Database unavailable",
+            "description": "The application cannot reach PostgreSQL.",
+            "logs": "connection refused",
+        },
+    )
+
+    incident_id = create_response.get_json()["incident"]["id"]
+
+    mock_analysis = {
+        "summary": "Database connectivity failure.",
+        "severity": "High",
+        "category": "Database",
+        "probable_causes": [
+            "Database service is unavailable",
+        ],
+        "investigation_steps": [
+            "Check database service health",
+        ],
+        "suggested_resolution": [
+            "Restart or restore the database service",
+        ],
+    }
+
+    with patch(
+        "app.services.ai_service.AIService.analyze_incident",
+        return_value=mock_analysis,
+    ):
+        with app.app_context():
+            incident = db.session.get(
+                Incident,
+                incident_id,
+            )
+
+            ai_service = AIService()
+            result = ai_service.analyze_incident(incident)
+
+    required_fields = {
+        "summary",
+        "severity",
+        "category",
+        "probable_causes",
+        "investigation_steps",
+        "suggested_resolution",
+    }
+
+    assert required_fields.issubset(result.keys())
+
+
+def test_ai_analysis_handles_invalid_json(app):
+    with patch(
+        "app.services.ai_service.AIService.generate",
+        return_value="This is not valid JSON",
+    ):
+        with app.app_context():
+            incident = Incident(
+                title="API failure",
+                description="The API is failing.",
+                logs="500 internal server error",
+            )
+
+            ai_service = AIService()
+
+            with pytest.raises(
+                ValueError,
+                match="AI returned an invalid incident analysis response",
+            ):
+                ai_service.analyze_incident(incident)
