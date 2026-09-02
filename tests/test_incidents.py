@@ -412,3 +412,126 @@ def test_ai_analysis_handles_invalid_json(app):
                 match="AI returned an invalid incident analysis response",
             ):
                 ai_service.analyze_incident(incident)
+
+def test_runbook_service_loads_documents():
+    from app.services.runbook_service import RunbookService
+
+    service = RunbookService()
+    documents = service.load_runbooks()
+
+    assert len(documents) == 8
+
+    sources = {
+        document["source"]
+        for document in documents
+    }
+
+    assert "api-errors.md" in sources
+    assert "authentication.md" in sources
+    assert "database.md" in sources
+    assert "deployment.md" in sources
+    assert "docker.md" in sources
+    assert "networking.md" in sources
+    assert "performance.md" in sources
+    assert "websocket.md" in sources
+
+
+def test_runbook_service_chunks_documents():
+    from app.services.runbook_service import RunbookService
+
+    service = RunbookService()
+    chunks = service.chunk_runbooks()
+
+    assert len(chunks) > 0
+
+    first_chunk = chunks[0]
+
+    assert "id" in first_chunk
+    assert "source" in first_chunk
+    assert "content" in first_chunk
+
+
+def test_runbook_semantic_retrieval():
+    from app.services.runbook_service import RunbookService
+
+    service = RunbookService()
+    service.ingest_runbooks()
+
+    results = service.search_runbooks(
+        (
+            "Users receive 401 Unauthorized errors "
+            "because JWT access tokens have expired"
+        ),
+        limit=3,
+    )
+
+    assert len(results) > 0
+    assert results[0]["source"] == "authentication.md"
+
+    for result in results:
+        assert "source" in result
+        assert "content" in result
+        assert "distance" in result
+
+
+def test_ai_analysis_includes_runbook_sources():
+    incident = Incident(
+        title="Production API returning 502 errors",
+        description=(
+            "Gateway cannot connect to the upstream service."
+        ),
+        logs=(
+            "502 Bad Gateway - Connection refused "
+            "while connecting to upstream"
+        ),
+    )
+
+    mock_analysis = {
+        "summary": "The upstream service is unavailable.",
+        "severity": "High",
+        "category": "API Gateway",
+        "probable_causes": [
+            "Upstream service is down",
+        ],
+        "investigation_steps": [
+            "Check upstream service health",
+        ],
+        "suggested_resolution": [
+            "Restore the upstream service",
+        ],
+    }
+
+    mock_runbooks = [
+        {
+            "source": "api-errors.md",
+            "content": "502 errors may occur when an upstream service is unavailable.",
+            "distance": 0.4,
+        },
+        {
+            "source": "api-errors.md",
+            "content": "Check proxy and upstream connectivity.",
+            "distance": 0.5,
+        },
+        {
+            "source": "networking.md",
+            "content": "Verify network connectivity.",
+            "distance": 0.6,
+        },
+    ]
+
+    with patch.object(
+        AIService,
+        "generate",
+        return_value=__import__("json").dumps(mock_analysis),
+    ):
+        with patch(
+            "app.services.runbook_service.RunbookService.search_runbooks",
+            return_value=mock_runbooks,
+        ):
+            service = AIService()
+            result = service.analyze_incident(incident)
+
+    assert result["sources"] == [
+        "api-errors.md",
+        "networking.md",
+    ]
