@@ -93,3 +93,62 @@ All automated tests passed.
 The Sprint 2 goal was achieved. ResolveAI can now analyze software incidents using AI while retrieving relevant troubleshooting guidance from its runbook knowledge base. The retrieved runbook context is incorporated into the AI diagnosis, and the runbook sources used are included in the analysis result for traceability.
 
 ResolveAI now has a functional retrieval-augmented generation pipeline that combines semantic search with AI-powered incident diagnosis.
+
+---
+
+## Sprint 3 — Incident Management Features and AI Feedback
+
+### Sprint Goal
+
+Complete the core incident management experience by adding incident discovery, operational analytics, and user feedback for AI-generated diagnoses.
+
+### Completed User Stories
+
+- US-006 — Search and filter incidents
+- US-007 — View incident analytics
+- US-008 — Rate AI diagnosis
+
+### Completed Features
+
+- Incident search by title and description
+- Incident filtering by status
+- Combined incident search and filtering
+- Incident analytics endpoint
+- Total incident metrics
+- Incident status summary metrics
+- AI-generated severity persistence
+- Incident severity summary metrics
+- AI diagnosis feedback endpoint
+- Helpful and not-helpful AI diagnosis ratings
+- AI feedback persistence
+- AI feedback input validation
+- AI analysis endpoint integration
+- Automated tests for search, filtering, analytics, and AI feedback
+
+### Testing
+
+Sprint 3 concluded with additional automated tests covering:
+
+- Incident search
+- Incident status filtering
+- Combined search and filtering
+- Empty analytics results
+- Total incident counts
+- Incident status metrics
+- Incident severity metrics
+- Helpful AI feedback submission
+- Not-helpful AI feedback submission
+- AI feedback persistence
+- Invalid AI feedback
+- Missing feedback request data
+- Feedback for nonexistent incidents
+
+At the completion of Sprint 3, the full ResolveAI automated test suite contained **32 passing tests**.
+
+### Sprint Outcome
+
+The Sprint 3 goal was achieved. ResolveAI now provides the core functionality required to manage incidents throughout their lifecycle, locate incidents using search and filtering, monitor incident trends through analytics, and collect user feedback on AI-generated diagnoses.
+
+The incident analytics functionality provides visibility into total incidents, incident status distribution, and AI-classified severity distribution. AI diagnosis feedback is persisted with each incident, providing a foundation for evaluating the usefulness of ResolveAI's AI-generated recommendations.
+
+With Sprint 3 complete, all planned core user stories for the ResolveAI capstone have been implemented and tested.
