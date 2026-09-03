@@ -717,3 +717,146 @@ def test_search_with_no_matches_returns_empty_list(
 
     assert data["count"] == 0
     assert data["incidents"] == []
+
+def test_incident_analytics_returns_zero_counts_when_empty(client):
+    response = client.get("/api/analytics")
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["total_incidents"] == 0
+
+    assert data["status_counts"] == {
+        "Open": 0,
+        "Investigating": 0,
+        "Resolved": 0,
+    }
+
+    assert data["severity_counts"] == {
+        "Low": 0,
+        "Medium": 0,
+        "High": 0,
+        "Critical": 0,
+        "Unclassified": 0,
+    }
+
+
+def test_incident_analytics_counts_statuses(client, app):
+    with app.app_context():
+        db.session.add_all(
+            [
+                Incident(
+                    title="Incident 1",
+                    description="Open incident",
+                    status="Open",
+                ),
+                Incident(
+                    title="Incident 2",
+                    description="Investigating incident",
+                    status="Investigating",
+                ),
+                Incident(
+                    title="Incident 3",
+                    description="Resolved incident",
+                    status="Resolved",
+                ),
+                Incident(
+                    title="Incident 4",
+                    description="Another open incident",
+                    status="Open",
+                ),
+            ]
+        )
+
+        db.session.commit()
+
+    response = client.get("/api/analytics")
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["total_incidents"] == 4
+    assert data["status_counts"]["Open"] == 2
+    assert data["status_counts"]["Investigating"] == 1
+    assert data["status_counts"]["Resolved"] == 1
+
+
+def test_incident_analytics_counts_severities(client, app):
+    with app.app_context():
+        db.session.add_all(
+            [
+                Incident(
+                    title="Low severity incident",
+                    description="Minor issue",
+                    severity="Low",
+                ),
+                Incident(
+                    title="Medium severity incident",
+                    description="Moderate issue",
+                    severity="Medium",
+                ),
+                Incident(
+                    title="High severity incident",
+                    description="Major issue",
+                    severity="High",
+                ),
+                Incident(
+                    title="Critical severity incident",
+                    description="Production outage",
+                    severity="Critical",
+                ),
+                Incident(
+                    title="Unclassified incident",
+                    description="Not yet analyzed",
+                ),
+            ]
+        )
+
+        db.session.commit()
+
+    response = client.get("/api/analytics")
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["severity_counts"]["Low"] == 1
+    assert data["severity_counts"]["Medium"] == 1
+    assert data["severity_counts"]["High"] == 1
+    assert data["severity_counts"]["Critical"] == 1
+    assert data["severity_counts"]["Unclassified"] == 1
+
+
+def test_incident_analytics_total_matches_created_incidents(
+    client,
+    app,
+):
+    with app.app_context():
+        db.session.add_all(
+            [
+                Incident(
+                    title="Incident A",
+                    description="First incident",
+                ),
+                Incident(
+                    title="Incident B",
+                    description="Second incident",
+                ),
+                Incident(
+                    title="Incident C",
+                    description="Third incident",
+                ),
+            ]
+        )
+
+        db.session.commit()
+
+    response = client.get("/api/analytics")
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["total_incidents"] == 3
