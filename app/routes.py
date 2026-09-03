@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, render_template, request
 from sqlalchemy import or_
 
 from app.extensions import db
@@ -10,17 +10,9 @@ main_bp = Blueprint("main", __name__)
 
 
 @main_bp.get("/")
+@main_bp.get("/")
 def home():
-    return jsonify(
-        {
-            "name": "ResolveAI",
-            "status": "running",
-            "message": (
-                "AI-powered software incident "
-                "diagnosis platform"
-            ),
-        }
-    )
+    return render_template("index.html")
 
 
 @main_bp.get("/api/health")

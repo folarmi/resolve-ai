@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>ResolveAI</title>
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+  </head>
+
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">R</div>
+
+          <div>
+            <h1>ResolveAI</h1>
+            <p>Incident Intelligence</p>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <button class="nav-item active">Dashboard</button>
+
+          <button class="nav-item">Incidents</button>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">SOFTWARE INCIDENT MANAGEMENT</p>
+
+            <h2>Incident Dashboard</h2>
+
+            <p class="subtitle">
+              Monitor, diagnose, and resolve incidents with AI-assisted
+              recommendations.
+            </p>
+          </div>
+
+          <button class="primary-button" id="open-create-incident">
+            + New Incident
+          </button>
+        </header>
+
+        <section class="metrics-grid">
+          <article class="metric-card">
+            <span>Total Incidents</span>
+            <strong id="total-incidents">0</strong>
+          </article>
+
+          <article class="metric-card">
+            <span>Open</span>
+            <strong id="open-incidents">0</strong>
+          </article>
+
+          <article class="metric-card">
+            <span>Investigating</span>
+            <strong id="investigating-incidents"> 0 </strong>
+          </article>
+
+          <article class="metric-card">
+            <span>Resolved</span>
+            <strong id="resolved-incidents">0</strong>
+          </article>
+        </section>
+
+        <section class="content-card">
+          <div class="section-header">
+            <div>
+              <h3>Incidents</h3>
+
+              <p>Review and manage reported software incidents.</p>
+            </div>
+
+            <div class="filters">
+              <input
+                id="incident-search"
+                type="search"
+                placeholder="Search incidents..."
+              />
+
+              <select id="status-filter">
+                <option value="">All statuses</option>
+
+                <option value="Open">Open</option>
+
+                <option value="Investigating">Investigating</option>
+
+                <option value="Resolved">Resolved</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="incident-list" class="incident-list">
+            <div class="empty-state">
+              <h4>No incidents yet</h4>
+
+              <p>Create your first incident to start using ResolveAI.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- CREATE INCIDENT MODAL -->
+
+    <div class="modal hidden" id="incident-modal">
+      <div class="modal-backdrop"></div>
+
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">NEW INCIDENT</p>
+
+            <h3>Create Incident</h3>
+          </div>
+
+          <button id="close-create-incident" class="icon-button" type="button">
+            ×
+          </button>
+        </div>
+
+        <form id="incident-form">
+          <label>
+            Title
+
+            <input
+              type="text"
+              id="incident-title"
+              required
+              placeholder="e.g. Production API returning 502 errors"
+            />
+          </label>
+
+          <label>
+            Description
+
+            <textarea
+              id="incident-description"
+              rows="5"
+              required
+              placeholder="Describe the incident and its impact"
+            ></textarea>
+          </label>
+
+          <label>
+            Logs
+
+            <textarea
+              id="incident-logs"
+              rows="5"
+              placeholder="Paste relevant logs here"
+            ></textarea>
+          </label>
+
+          <div class="form-actions">
+            <button
+              type="button"
+              class="secondary-button"
+              id="cancel-create-incident"
+            >
+              Cancel
+            </button>
+
+            <button type="submit" class="primary-button">
+              Create Incident
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- INCIDENT DETAILS MODAL -->
+
+    <div class="modal hidden" id="details-modal">
+      <div class="modal-backdrop"></div>
+
+      <div class="details-card">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">INCIDENT DETAILS</p>
+
+            <h3 id="details-title">Incident</h3>
+          </div>
+
+          <button id="close-details" class="icon-button" type="button">
+            ×
+          </button>
+        </div>
+
+        <div class="details-layout">
+          <section class="incident-details-section">
+            <div class="detail-block">
+              <span class="detail-label"> Description </span>
+
+              <p id="details-description"></p>
+            </div>
+
+            <div class="detail-block">
+              <span class="detail-label"> Logs </span>
+
+              <pre id="details-logs" class="logs-box"></pre>
+            </div>
+
+            <div class="detail-block">
+              <span class="detail-label"> Status </span>
+
+              <div class="status-control">
+                <select id="details-status">
+                  <option value="Open">Open</option>
+
+                  <option value="Investigating">Investigating</option>
+
+                  <option value="Resolved">Resolved</option>
+                </select>
+
+                <button
+                  id="update-status"
+                  class="secondary-button"
+                  type="button"
+                >
+                  Update Status
+                </button>
+              </div>
+            </div>
+
+            <div class="detail-block">
+              <span class="detail-label"> Severity </span>
+
+              <span id="details-severity" class="badge"> Unclassified </span>
+            </div>
+
+            <button
+              id="run-analysis"
+              class="primary-button analysis-button"
+              type="button"
+            >
+              Run AI Diagnosis
+            </button>
+
+            <p id="details-message" class="message-text"></p>
+          </section>
+
+          <section class="analysis-section">
+            <div class="analysis-header">
+              <div>
+                <p class="eyebrow">AI DIAGNOSIS</p>
+
+                <h3>Diagnosis & Recommendations</h3>
+              </div>
+            </div>
+
+            <div id="analysis-empty" class="analysis-empty">
+              <h4>No diagnosis yet</h4>
+
+              <p>
+                Run AI Diagnosis to analyze this incident using ResolveAI and
+                relevant troubleshooting runbooks.
+              </p>
+            </div>
+
+            <div id="analysis-content" class="hidden">
+              <div class="analysis-summary-row">
+                <div>
+                  <span class="detail-label"> Severity </span>
+
+                  <strong id="analysis-severity"></strong>
+                </div>
+
+                <div>
+                  <span class="detail-label"> Category </span>
+
+                  <strong id="analysis-category"></strong>
+                </div>
+              </div>
+
+              <div class="analysis-block">
+                <span class="detail-label"> Summary </span>
+
+                <p id="analysis-summary"></p>
+              </div>
+
+              <div class="analysis-block">
+                <span class="detail-label"> Probable Causes </span>
+
+                <ul id="analysis-causes"></ul>
+              </div>
+
+              <div class="analysis-block">
+                <span class="detail-label"> Investigation Steps </span>
+
+                <ol id="analysis-investigation"></ol>
+              </div>
+
+              <div class="analysis-block">
+                <span class="detail-label"> Suggested Resolution </span>
+
+                <ol id="analysis-resolution"></ol>
+              </div>
+
+              <div class="analysis-block">
+                <span class="detail-label"> Runbook Sources </span>
+
+                <div id="analysis-sources" class="source-list"></div>
+              </div>
+
+              <div class="feedback-section">
+                <div>
+                  <strong> Was this diagnosis helpful? </strong>
+
+                  <p>
+                    Your feedback helps evaluate ResolveAI's recommendations.
+                  </p>
+                </div>
+
+                <div class="feedback-actions">
+                  <button
+                    id="feedback-helpful"
+                    class="secondary-button"
+                    type="button"
+                  >
+                    👍 Helpful
+                  </button>
+
+                  <button
+                    id="feedback-not-helpful"
+                    class="secondary-button"
+                    type="button"
+                  >
+                    👎 Not Helpful
+                  </button>
+                </div>
+              </div>
+
+              <p id="feedback-message" class="message-text"></p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </body>
+</html>
