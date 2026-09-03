@@ -860,3 +860,147 @@ def test_incident_analytics_total_matches_created_incidents(
     data = response.get_json()
 
     assert data["total_incidents"] == 3
+
+def test_submit_helpful_ai_feedback(client, app):
+    with app.app_context():
+        incident = Incident(
+            title="API outage",
+            description="Production API is unavailable",
+        )
+
+        db.session.add(incident)
+        db.session.commit()
+
+        incident_id = incident.id
+
+    response = client.post(
+        f"/api/incidents/{incident_id}/feedback",
+        json={
+            "helpful": True,
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["message"] == "AI diagnosis feedback saved"
+    assert data["incident_id"] == incident_id
+    assert data["helpful"] is True
+
+    with app.app_context():
+        saved_incident = db.session.get(
+            Incident,
+            incident_id,
+        )
+
+        assert saved_incident.ai_feedback_helpful is True
+
+
+def test_submit_not_helpful_ai_feedback(client, app):
+    with app.app_context():
+        incident = Incident(
+            title="Database failure",
+            description="Database connections are failing",
+        )
+
+        db.session.add(incident)
+        db.session.commit()
+
+        incident_id = incident.id
+
+    response = client.post(
+        f"/api/incidents/{incident_id}/feedback",
+        json={
+            "helpful": False,
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+
+    assert data["helpful"] is False
+
+    with app.app_context():
+        saved_incident = db.session.get(
+            Incident,
+            incident_id,
+        )
+
+        assert saved_incident.ai_feedback_helpful is False
+
+
+def test_ai_feedback_requires_boolean(client, app):
+    with app.app_context():
+        incident = Incident(
+            title="Deployment failure",
+            description="Deployment failed",
+        )
+
+        db.session.add(incident)
+        db.session.commit()
+
+        incident_id = incident.id
+
+    response = client.post(
+        f"/api/incidents/{incident_id}/feedback",
+        json={
+            "helpful": "yes",
+        },
+    )
+
+    assert response.status_code == 400
+
+    data = response.get_json()
+
+    assert data["error"] == "Validation failed"
+    assert (
+        data["details"]["helpful"]
+        == "Helpful must be true or false"
+    )
+
+
+def test_ai_feedback_requires_request_body(client, app):
+    with app.app_context():
+        incident = Incident(
+            title="Authentication failure",
+            description="Users cannot authenticate",
+        )
+
+        db.session.add(incident)
+        db.session.commit()
+
+        incident_id = incident.id
+
+    response = client.post(
+        f"/api/incidents/{incident_id}/feedback"
+    )
+
+    assert response.status_code == 400
+
+    data = response.get_json()
+
+    assert (
+        data["error"]
+        == "Request body must contain valid JSON"
+    )
+
+
+def test_ai_feedback_returns_404_for_unknown_incident(
+    client,
+):
+    response = client.post(
+        "/api/incidents/"
+        "00000000-0000-0000-0000-000000000000/"
+        "feedback",
+        json={
+            "helpful": True,
+        },
+    )
+
+    assert response.status_code == 404
+
+    data = response.get_json()
+
+    assert data["error"] == "Incident not found"
