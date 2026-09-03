@@ -2,6 +2,7 @@ import json
 import os
 
 from groq import Groq
+from sqlalchemy import inspect
 
 from app.extensions import db
 from app.services.prompts import (
@@ -109,13 +110,12 @@ class AIService:
 
         severity = analysis.get("severity")
 
-        if severity in [
-            "Low",
-            "Medium",
-            "High",
-            "Critical",
-        ]:
-            incident.severity = severity
-            db.session.commit()
+        if severity in ["Low", "Medium", "High", "Critical"]:
+         incident.severity = severity
+
+        state = inspect(incident)
+
+        if state.persistent:
+         db.session.commit()
 
         return analysis
