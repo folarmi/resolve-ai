@@ -370,19 +370,23 @@ def submit_incident_feedback(incident_id):
             400,
         )
 
+    incident.ai_feedback_helpful = helpful
+    db.session.commit()
+
     return (
         jsonify(
             {
                 "message": (
-                    "AI diagnosis feedback received"
+                    "AI diagnosis feedback saved"
                 ),
                 "incident_id": incident.id,
-                "helpful": helpful,
+                "helpful": (
+                    incident.ai_feedback_helpful
+                ),
             }
         ),
         200,
     )
-
 
 @main_bp.get("/api/analytics")
 def get_incident_analytics():
@@ -428,6 +432,7 @@ def get_incident_analytics():
         ),
         200,
     )
+
 
 
 

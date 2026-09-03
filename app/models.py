@@ -39,6 +39,11 @@ class Incident(db.Model):
         nullable=True,
     )
 
+    ai_feedback_helpful = db.Column(
+        db.Boolean,
+        nullable=True,
+    )
+
     created_at = db.Column(
         db.DateTime,
         nullable=False,
@@ -60,6 +65,7 @@ class Incident(db.Model):
             "logs": self.logs,
             "status": self.status,
             "severity": self.severity,
+            "ai_feedback_helpful": self.ai_feedback_helpful,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
