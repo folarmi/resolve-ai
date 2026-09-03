@@ -34,6 +34,11 @@ class Incident(db.Model):
         default="Open",
     )
 
+    severity = db.Column(
+        db.String(20),
+        nullable=True,
+    )
+
     created_at = db.Column(
         db.DateTime,
         nullable=False,
@@ -54,6 +59,7 @@ class Incident(db.Model):
             "description": self.description,
             "logs": self.logs,
             "status": self.status,
+            "severity": self.severity,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }

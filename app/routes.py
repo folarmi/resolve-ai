@@ -90,7 +90,6 @@ def create_incident():
 
 
 @main_bp.get("/api/incidents")
-
 def get_incidents():
     search = request.args.get(
         "search",
@@ -136,9 +135,13 @@ def get_incidents():
         200,
     )
 
+
 @main_bp.patch("/api/incidents/<string:incident_id>/status")
 def update_incident_status(incident_id):
-    incident = db.session.get(Incident, incident_id)
+    incident = db.session.get(
+        Incident,
+        incident_id,
+    )
 
     if incident is None:
         return (
@@ -162,7 +165,9 @@ def update_incident_status(incident_id):
             400,
         )
 
-    status = str(data.get("status", "")).strip()
+    status = str(
+        data.get("status", "")
+    ).strip()
 
     allowed_statuses = [
         "Open",
@@ -212,9 +217,13 @@ def update_incident_status(incident_id):
         200,
     )
 
+
 @main_bp.get("/api/incidents/<string:incident_id>")
 def get_incident(incident_id):
-    incident = db.session.get(Incident, incident_id)
+    incident = db.session.get(
+        Incident,
+        incident_id,
+    )
 
     if incident is None:
         return (
@@ -235,16 +244,48 @@ def get_incident(incident_id):
         200,
     )
 
+
 @main_bp.get("/api/analytics")
 def get_incident_analytics():
     total_incidents = Incident.query.count()
+
+    status_counts = {
+        "Open": Incident.query.filter_by(
+            status="Open"
+        ).count(),
+        "Investigating": Incident.query.filter_by(
+            status="Investigating"
+        ).count(),
+        "Resolved": Incident.query.filter_by(
+            status="Resolved"
+        ).count(),
+    }
+
+    severity_counts = {
+        "Low": Incident.query.filter_by(
+            severity="Low"
+        ).count(),
+        "Medium": Incident.query.filter_by(
+            severity="Medium"
+        ).count(),
+        "High": Incident.query.filter_by(
+            severity="High"
+        ).count(),
+        "Critical": Incident.query.filter_by(
+            severity="Critical"
+        ).count(),
+        "Unclassified": Incident.query.filter(
+            Incident.severity.is_(None)
+        ).count(),
+    }
 
     return (
         jsonify(
             {
                 "total_incidents": total_incidents,
+                "status_counts": status_counts,
+                "severity_counts": severity_counts,
             }
         ),
         200,
     )
-

@@ -3,6 +3,7 @@ import os
 
 from groq import Groq
 
+from app.extensions import db
 from app.services.prompts import (
     INCIDENT_ANALYSIS_SYSTEM_PROMPT,
     build_incident_analysis_prompt,
@@ -105,5 +106,16 @@ class AIService:
                 for match in runbook_matches
             )
         )
+
+        severity = analysis.get("severity")
+
+        if severity in [
+            "Low",
+            "Medium",
+            "High",
+            "Critical",
+        ]:
+            incident.severity = severity
+            db.session.commit()
 
         return analysis
