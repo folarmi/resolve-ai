@@ -37,7 +37,8 @@ class RunbookService:
 
         if not self.runbook_directory.exists():
             raise FileNotFoundError(
-                f"Runbook directory not found: {self.runbook_directory}"
+                f"Runbook directory not found: "
+                f"{self.runbook_directory}"
             )
 
         for file_path in sorted(
@@ -69,7 +70,9 @@ class RunbookService:
             for index, text in enumerate(split_texts):
                 chunks.append(
                     {
-                        "id": f"{document['source']}-{index}",
+                        "id": (
+                            f"{document['source']}-{index}"
+                        ),
                         "source": document["source"],
                         "content": text,
                     }
@@ -116,11 +119,24 @@ class RunbookService:
 
         return len(chunks)
 
+    def ensure_runbooks_ingested(self):
+        if self.collection.count() == 0:
+            return self.ingest_runbooks()
+
+        return self.collection.count()
+
     def search_runbooks(
         self,
         query,
         limit=3,
     ):
+        self.ensure_runbooks_ingested()
+
+        collection_count = self.collection.count()
+
+        if collection_count == 0:
+            return []
+
         query_embeddings = list(
             self.embedding_model.embed(
                 [query]
@@ -131,7 +147,10 @@ class RunbookService:
             query_embeddings=[
                 query_embeddings[0].tolist()
             ],
-            n_results=limit,
+            n_results=min(
+                limit,
+                collection_count,
+            ),
             include=[
                 "documents",
                 "metadatas",
@@ -141,9 +160,20 @@ class RunbookService:
 
         matches = []
 
-        documents = results.get("documents", [[]])[0]
-        metadatas = results.get("metadatas", [[]])[0]
-        distances = results.get("distances", [[]])[0]
+        documents = results.get(
+            "documents",
+            [[]],
+        )[0]
+
+        metadatas = results.get(
+            "metadatas",
+            [[]],
+        )[0]
+
+        distances = results.get(
+            "distances",
+            [[]],
+        )[0]
 
         for document, metadata, distance in zip(
             documents,
