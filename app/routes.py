@@ -3,6 +3,7 @@ from sqlalchemy import or_
 
 from app.extensions import db
 from app.models import Incident
+from app.services.ai_service import AIService
 
 
 main_bp = Blueprint("main", __name__)
@@ -14,7 +15,10 @@ def home():
         {
             "name": "ResolveAI",
             "status": "running",
-            "message": "AI-powered software incident diagnosis platform",
+            "message": (
+                "AI-powered software incident "
+                "diagnosis platform"
+            ),
         }
     )
 
@@ -43,8 +47,14 @@ def create_incident():
             400,
         )
 
-    title = str(data.get("title", "")).strip()
-    description = str(data.get("description", "")).strip()
+    title = str(
+        data.get("title", "")
+    ).strip()
+
+    description = str(
+        data.get("description", "")
+    ).strip()
+
     logs = data.get("logs")
 
     errors = {}
@@ -136,7 +146,36 @@ def get_incidents():
     )
 
 
-@main_bp.patch("/api/incidents/<string:incident_id>/status")
+@main_bp.get("/api/incidents/<string:incident_id>")
+def get_incident(incident_id):
+    incident = db.session.get(
+        Incident,
+        incident_id,
+    )
+
+    if incident is None:
+        return (
+            jsonify(
+                {
+                    "error": "Incident not found",
+                }
+            ),
+            404,
+        )
+
+    return (
+        jsonify(
+            {
+                "incident": incident.to_dict(),
+            }
+        ),
+        200,
+    )
+
+
+@main_bp.patch(
+    "/api/incidents/<string:incident_id>/status"
+)
 def update_incident_status(incident_id):
     incident = db.session.get(
         Incident,
@@ -159,7 +198,9 @@ def update_incident_status(incident_id):
         return (
             jsonify(
                 {
-                    "error": "Request body must contain valid JSON",
+                    "error": (
+                        "Request body must contain valid JSON"
+                    ),
                 }
             ),
             400,
@@ -210,7 +251,9 @@ def update_incident_status(incident_id):
     return (
         jsonify(
             {
-                "message": "Incident status updated successfully",
+                "message": (
+                    "Incident status updated successfully"
+                ),
                 "incident": incident.to_dict(),
             }
         ),
@@ -218,8 +261,10 @@ def update_incident_status(incident_id):
     )
 
 
-@main_bp.get("/api/incidents/<string:incident_id>")
-def get_incident(incident_id):
+@main_bp.post(
+    "/api/incidents/<string:incident_id>/analyze"
+)
+def analyze_incident(incident_id):
     incident = db.session.get(
         Incident,
         incident_id,
@@ -235,10 +280,104 @@ def get_incident(incident_id):
             404,
         )
 
+    try:
+        service = AIService()
+
+        analysis = service.analyze_incident(
+            incident
+        )
+
+        return (
+            jsonify(
+                {
+                    "incident_id": incident.id,
+                    "analysis": analysis,
+                }
+            ),
+            200,
+        )
+
+    except ValueError as exc:
+        return (
+            jsonify(
+                {
+                    "error": str(exc),
+                }
+            ),
+            500,
+        )
+
+    except Exception:
+        return (
+            jsonify(
+                {
+                    "error": (
+                        "Unable to analyze incident"
+                    ),
+                }
+            ),
+            500,
+        )
+
+
+@main_bp.post(
+    "/api/incidents/<string:incident_id>/feedback"
+)
+def submit_incident_feedback(incident_id):
+    incident = db.session.get(
+        Incident,
+        incident_id,
+    )
+
+    if incident is None:
+        return (
+            jsonify(
+                {
+                    "error": "Incident not found",
+                }
+            ),
+            404,
+        )
+
+    data = request.get_json(silent=True)
+
+    if not data:
+        return (
+            jsonify(
+                {
+                    "error": (
+                        "Request body must contain valid JSON"
+                    ),
+                }
+            ),
+            400,
+        )
+
+    helpful = data.get("helpful")
+
+    if not isinstance(helpful, bool):
+        return (
+            jsonify(
+                {
+                    "error": "Validation failed",
+                    "details": {
+                        "helpful": (
+                            "Helpful must be true or false"
+                        ),
+                    },
+                }
+            ),
+            400,
+        )
+
     return (
         jsonify(
             {
-                "incident": incident.to_dict(),
+                "message": (
+                    "AI diagnosis feedback received"
+                ),
+                "incident_id": incident.id,
+                "helpful": helpful,
             }
         ),
         200,
@@ -289,3 +428,6 @@ def get_incident_analytics():
         ),
         200,
     )
+
+
+
