@@ -119,3 +119,5 @@ class AIService:
          db.session.commit()
 
         return analysis
+
+
