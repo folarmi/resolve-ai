@@ -32,6 +32,8 @@ ResolveAI uses a layered web application architecture in which the Flask applica
 
 The high-level architecture is:
 
+![ResolveAI System Architecture](architecture.png)
+
 ```text
 Browser
    |
